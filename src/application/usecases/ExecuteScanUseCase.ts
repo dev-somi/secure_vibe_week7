@@ -6,6 +6,7 @@ export interface ScanPayload {
   files: File[]
   code: string
   language: string
+  githubUrl?: string
 }
 
 export async function executeScan(payload: ScanPayload): Promise<VulnerabilityResult[]> {
@@ -15,14 +16,19 @@ export async function executeScan(payload: ScanPayload): Promise<VulnerabilityRe
   if (payload.mode === 'DIRECT_CODE' && !payload.code.trim()) {
     throw new Error('No content provided for scanning')
   }
+  if (payload.mode === 'GITHUB_URL' && !payload.githubUrl?.trim()) {
+    throw new Error('GitHub URL is required')
+  }
 
   const formData = new FormData()
 
   if (payload.mode === 'UPLOAD_FILES') {
     formData.append('code_file', payload.files[0])
-  } else {
+  } else if (payload.mode === 'DIRECT_CODE') {
     formData.append('code_text', payload.code)
     formData.append('language', payload.language)
+  } else if (payload.mode === 'GITHUB_URL') {
+    formData.append('codeurl', payload.githubUrl!)
   }
 
   const response = await fetch('http://localhost:8000/scan', {
