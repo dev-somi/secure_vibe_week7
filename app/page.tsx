@@ -1,201 +1,148 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, DragEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import NavBar from '@/src/presentation/components/layout/NavBar'
-import ScanInputSelector from '@/src/presentation/components/features/ScanInputSelector'
-import FileDropzone from '@/src/presentation/components/features/FileDropzone'
-import CodeEditorInput from '@/src/presentation/components/features/CodeEditorInput'
-import GithubInput from '@/src/presentation/components/features/GithubInput'
-import SecurityInfoCard from '@/src/presentation/components/features/SecurityInfoCard'
-import { ScanMode } from '@/src/domain/entities/ScanType'
-import { SecurityFeature } from '@/src/domain/entities/SecurityFeature'
-
-const SECURITY_FEATURES: SecurityFeature[] = [
-  {
-    id: 'ai-scan',
-    title: 'Deep AI Scanning',
-    description: 'Advanced AI analysis to detect zero-day vulnerabilities and complex logic flaws that traditional scanners miss.',
-    iconType: 'ai'
-  },
-  {
-    id: 'owasp',
-    title: 'OWASP Top 10',
-    description: 'Complete coverage of OWASP top 10 security risks including Injection, Broken Authentication, and XSS.',
-    iconType: 'shield'
-  },
-  {
-    id: 'zk',
-    title: 'Zero-Knowledge',
-    description: 'Your code never leaves your browser. All static analysis is performed locally for ultimate privacy.',
-    iconType: 'lock'
-  }
-]
+import { Upload, GitBranch, ArrowRight } from 'lucide-react'
 
 export default function Home() {
-  const [scanMode, setScanMode] = useState<ScanMode>('UPLOAD_FILES')
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
-  const [codeContent, setCodeContent] = useState('')
   const [githubUrl, setGithubUrl] = useState('')
-  const [language, setLanguage] = useState('.py')
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
-
-  const router = useRouter()
-
-  // 새로 추가된 상태: 검사 진행 여부와 서버에서 받은 결과를 저장합니다.
   const [isScanning, setIsScanning] = useState(false)
-  const [scanResults, setScanResults] = useState<any[] | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const router = useRouter()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleFilesSelected = (files: File[]) => {
-    setErrorMsg(null)
-    setScanResults(null)
-    setSelectedFiles(files)
-  }
-
-  const handleError = (msg: string) => {
-    setErrorMsg(msg)
-  }
-
-  // Mock Scan function
-  const executeScan = async () => {
-    if (scanMode === 'UPLOAD_FILES' && selectedFiles.length === 0) {
-      setErrorMsg('업로드할 파일을 선택해주세요.')
-      return
-    }
-    if (scanMode === 'DIRECT_CODE' && !codeContent.trim()) {
-      setErrorMsg('검사할 코드를 입력해주세요.')
-      return
-    }
-    if (scanMode === 'GITHUB_URL' && !githubUrl.trim()) {
-      setErrorMsg('GitHub URL을 입력해주세요.')
-      return
-    }
-
+  const handleScan = () => {
+    if (!githubUrl.trim()) return
     setIsScanning(true)
-    setErrorMsg(null)
-    setScanResults(null)
-
-    // Simulate network delay for scanning
+    
+    // 분석 진행 시뮬레이션
     setTimeout(() => {
       setIsScanning(false)
-      // Route to dummy data dashboard
-      router.push('/analysis/101')
+      router.push('/analysis/1')
     }, 1500)
   }
 
+  const handleFileDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setIsDragging(false)
+    
+    setIsScanning(true)
+    setTimeout(() => {
+      setIsScanning(false)
+      router.push('/analysis/1')
+    }, 1000)
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-[Arial,Helvetica,sans-serif]">
-      <NavBar />
-
-      <main className="flex-1 flex flex-col pt-12 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
-
-        {/* Header Section */}
+    <main className="min-h-screen bg-[#F9F8F4] flex flex-col items-center justify-center p-4 md:p-8 font-sans text-[#1A1A1A]">
+      
+      <div className="max-w-6xl w-full flex flex-col items-center py-10">
+        {/* 헤더 섹션 */}
         <div className="text-center mb-12">
-          <h1 className="text-5xl font-extrabold text-gray-900 tracking-tight mb-4">
-            Secure your code with continuous <br /> <span className="text-obsidian-green">Intelligent Analysis</span>
+          <h1 className="text-4xl md:text-7xl font-bold mb-6 italic tracking-tight leading-none" style={{ fontFamily: 'Georgia, serif' }}>
+            코드를 점검해보세요.
           </h1>
-          <p className="text-xl text-gray-500 max-w-2xl mx-auto">
-            Drag and drop your project files or paste snippets instantly. Detect vulnerabilities before they hit production.
+          <p className="text-gray-500 text-lg md:text-xl font-medium max-w-2xl mx-auto opacity-80">
+            레포지토리를 붙여넣거나 파일을 드래그하세요 — 취약점을 찾아드립니다.
           </p>
         </div>
 
-        {/* Input area */}
-        <div className="max-w-3xl mx-auto w-full mb-8 relative z-10">
-          <ScanInputSelector currentMode={scanMode} onChange={setScanMode} />
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2">
-            {scanMode === 'UPLOAD_FILES' ? (
-              <FileDropzone onFilesSelected={handleFilesSelected} onError={handleError} />
-            ) : scanMode === 'GITHUB_URL' ? (
-              <div className="p-8 pb-4">
-                <GithubInput 
-                  value={githubUrl} 
-                  onChange={(val) => { setErrorMsg(null); setGithubUrl(val); }} 
-                  onSubmit={executeScan}
-                />
-              </div>
-            ) : (
-              <>
-                <CodeEditorInput value={codeContent} onChange={(val) => {
-                  setErrorMsg(null)
-                  setScanResults(null)
-                  setCodeContent(val)
-                }} />
-                <select
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  className="mt-2 ml-2 p-1 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700"
-                >
-                  <option value=".py">Python</option>
-                  <option value=".js">JavaScript</option>
-                  <option value=".java">Java</option>
-                  <option value=".c">C/C++</option>
-                </select>
-              </>
-            )}
-            {errorMsg && <p className="text-red-500 mt-2 text-sm text-center font-medium">{errorMsg}</p>}
-            {scanMode === 'UPLOAD_FILES' && selectedFiles.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                {selectedFiles.map(f => (
-                  <span key={f.name} className="px-3 py-1 bg-teal-50 text-teal-800 rounded-full text-xs font-medium border border-teal-200">
-                    {f.name}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 기존 ScanAction 컴포넌트를 대체하는 스캔 버튼 */}
-        <div className="flex justify-center mb-12">
-          <button
-            onClick={executeScan}
-            disabled={isScanning}
-            className={`px-8 py-3 rounded-lg font-bold text-white transition-colors ${
-              isScanning ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#0f172a] hover:bg-obsidian-green hover:text-[#0f172a]'
+        {/* 메인 인터페이스 카드 섹션 */}
+        <div className="flex flex-col md:flex-row w-full items-stretch justify-center gap-0 mb-16 relative">
+          
+          {/* 왼쪽: 파일 업로드 영역 */}
+          <div 
+            className={`flex-1 border-2 border-dashed border-gray-400 rounded-[2rem] md:rounded-r-none p-10 md:p-16 flex flex-col items-center justify-center transition-all bg-transparent z-10 ${
+              isDragging ? 'bg-white/40 border-gray-900 shadow-xl scale-[1.02]' : ''
             }`}
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={handleFileDrop}
           >
-            {isScanning ? '분석 진행 중...' : 'INITIATE SECURITY SCAN'}
-          </button>
-        </div>
-
-        {/* 서버 분석 결과 출력 영역 */}
-        {scanResults && (
-          <div className="max-w-3xl mx-auto w-full mb-12 p-6 bg-white rounded-xl shadow-sm border border-gray-200">
-            <h3 className="text-2xl font-bold mb-4">
-              {scanResults.length === 0 ? (
-                 <span className="text-green-600">✅ 보안 취약점이 발견되지 않았습니다. 안전한 코드입니다!</span>
-              ) : (
-                 <span className="text-red-600">🚨 총 {scanResults.length}개의 보안 위협이 발견되었습니다.</span>
-              )}
-            </h3>
-
-            <div className="space-y-4">
-              {scanResults.map((vuln, index) => (
-                <div key={index} className="p-4 bg-red-50 border-l-4 border-red-500 rounded-r-md">
-                  <p className="font-semibold text-red-900">
-                    [{index + 1}] 라인 {vuln.start.line} - 심각도: {vuln.extra.severity}
-                  </p>
-                  <p className="text-sm text-gray-600 mb-2">
-                    분류: {vuln.extra.metadata?.cwe ? vuln.extra.metadata.cwe[0] : '분류 없음'}
-                  </p>
-                  <p className="text-gray-800 font-mono text-sm bg-red-100 p-2 rounded mt-2">
-                    {vuln.extra.message}
-                  </p>
-                </div>
+            <Upload className="w-16 h-16 text-gray-700 mb-8" />
+            <h2 className="text-2xl md:text-3xl font-bold mb-3 italic" style={{ fontFamily: 'Georgia, serif' }}>코드를 드래그하세요</h2>
+            <p className="text-gray-400 text-sm mb-8 italic">.zip · 폴더 · 단일 파일</p>
+            
+            <div className="flex flex-wrap gap-2 mb-10 justify-center">
+              {['.js', '.py', '.ts', '.go', '+more'].map(ext => (
+                <span key={ext} className="border border-gray-300 rounded-full px-4 py-1.5 text-xs font-medium bg-white">
+                  {ext}
+                </span>
               ))}
             </div>
-          </div>
-        )}
 
-        {/* Responsive Grid for Security Info Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-auto pb-16">
-          {SECURITY_FEATURES.map(feature => (
-            <SecurityInfoCard key={feature.id} feature={feature} />
-          ))}
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="bg-white border-2 border-gray-900 rounded-full px-10 py-4 font-bold text-lg hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all active:translate-y-1 active:shadow-none z-20"
+            >
+              파일 탐색
+            </button>
+            <input type="file" ref={fileInputRef} className="hidden" multiple />
+          </div>
+
+          {/* 중앙 구분선 및 '또는' (데스크탑용) */}
+          <div className="hidden md:flex items-center justify-center px-0 relative z-20 mx-[-1px]">
+            <div className="h-full w-[1px] bg-gray-300"></div>
+            <span className="bg-[#F9F8F4] px-4 py-2 text-gray-400 italic font-serif text-xl absolute">
+              또는
+            </span>
+          </div>
+
+          {/* 중앙 '또는' (모바일용) */}
+          <div className="md:hidden flex items-center justify-center py-8 relative w-full overflow-hidden">
+            <div className="h-[1px] w-full bg-gray-300"></div>
+            <span className="bg-[#F9F8F4] px-4 py-1 text-gray-400 italic font-serif text-lg absolute">
+              또는
+            </span>
+          </div>
+
+          {/* 오른쪽: GitHub 입력 영역 */}
+          <div className="flex-1 border-2 border-gray-900 rounded-[2rem] md:rounded-l-none p-10 md:p-16 flex flex-col items-center justify-center bg-white shadow-sm z-10">
+            <div className="flex items-center gap-4 self-start mb-10">
+              <div className="border-2 border-gray-900 rounded-full p-2.5 bg-[#F9F8F4]">
+                <GitBranch className="w-8 h-8" />
+              </div>
+              <span className="text-xl md:text-2xl font-bold italic" style={{ fontFamily: 'Georgia, serif' }}>GitHub 레포지토리에서 가져오기</span>
+            </div>
+
+            <div className="w-full relative mb-8">
+              <input 
+                type="text" 
+                placeholder="https://github.com/your-org/repo"
+                className="w-full border-2 border-gray-900 rounded-xl p-5 text-lg focus:outline-none focus:ring-0 placeholder:text-gray-300 bg-white"
+                value={githubUrl}
+                onChange={(e) => setGithubUrl(e.target.value)}
+              />
+            </div>
+
+            <button 
+              onClick={handleScan}
+              disabled={isScanning || !githubUrl.trim()}
+              className="w-full bg-[#1A1A1A] text-white rounded-full py-5 flex items-center justify-center gap-3 font-bold text-xl hover:bg-black transition-all disabled:opacity-30 disabled:cursor-not-allowed group shadow-lg"
+            >
+              {isScanning ? '분석 중...' : '분석 시작'} 
+              {!isScanning && <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />}
+            </button>
+
+            <p className="mt-10 text-gray-400 text-sm text-center leading-relaxed italic">
+              공개 레포지토리는 즉시 가능하며,<br />
+              비공개는 GitHub 연결이 필요합니다.
+            </p>
+          </div>
         </div>
 
-      </main>
-    </div>
+        {/* 하단 푸터 정보 */}
+        <div className="text-gray-400 text-sm md:text-base flex flex-col md:flex-row items-center gap-2 font-medium opacity-70">
+          <span className="flex items-center gap-2">
+            <span className="text-lg">🔒</span> 코드는 안전한 샌드박스 내부에서만 유지됩니다
+          </span>
+          <span className="hidden md:inline mx-3 text-gray-300">•</span>
+          <span>분석은 보통 30-60초 정도 소요됩니다</span>
+        </div>
+      </div>
+    </main>
   )
 }
+
+
+

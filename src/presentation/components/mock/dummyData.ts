@@ -1,5 +1,29 @@
+export interface Vulnerability {
+    vuln_id: number;
+    task_id: number;
+    cwe_id: number;
+    severity: "critical" | "high" | "medium" | "low";
+    line_number: number;
+    content: {
+        title: string;
+        file: string;
+        risk_scenario: string;
+        fix_direction: string;
+        code_before: string;
+        code_after: string;
+    };
+}
+
+export interface AnalysisResult {
+    task_id: number;
+    project_id: number;
+    status: "completed" | "pending" | "failed";
+    source_url: string;
+    vulnerabilities: Vulnerability[];
+}
+
 // 분석 결과 더미데이터
-export const dummyAnalysis = {
+export const dummyAnalysis: AnalysisResult = {
     task_id: 1,
     project_id: 1,
     status: "completed",
@@ -38,11 +62,18 @@ export const dummyAnalysis = {
     ]
 }
 
-// 배포 가능 여부 계산
-export const getDeployStatus = (vulnerabilities) => {
-    const hasCritical = vulnerabilities.some(v => v.severity === "critical")
-    const hasHigh = vulnerabilities.some(v => v.severity === "high")
-    if (hasCritical) return "danger"    // ❌
-    if (hasHigh) return "caution"       // ⚠️
-    return "safe"                       // ✅
+/**
+ * 배포 가능 여부 상태를 반환합니다.
+ * @param vulnerabilities 취약점 목록
+ * @returns "danger" | "caution" | "safe"
+ */
+export const getDeployStatus = (vulnerabilities: Vulnerability[]): "danger" | "caution" | "safe" => {
+    if (!vulnerabilities || vulnerabilities.length === 0) return "safe";
+
+    const hasCritical = vulnerabilities.some(v => v.severity === "critical");
+    const hasHigh = vulnerabilities.some(v => v.severity === "high");
+
+    if (hasCritical) return "danger";    // ❌
+    if (hasHigh) return "caution";       // ⚠️
+    return "safe";                       // ✅
 }
