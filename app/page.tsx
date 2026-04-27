@@ -1,10 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import NavBar from '@/src/presentation/components/layout/NavBar'
 import ScanInputSelector from '@/src/presentation/components/features/ScanInputSelector'
 import FileDropzone from '@/src/presentation/components/features/FileDropzone'
 import CodeEditorInput from '@/src/presentation/components/features/CodeEditorInput'
+import GithubInput from '@/src/presentation/components/features/GithubInput'
 import SecurityInfoCard from '@/src/presentation/components/features/SecurityInfoCard'
 import { ScanMode } from '@/src/domain/entities/ScanType'
 import { SecurityFeature } from '@/src/domain/entities/SecurityFeature'
@@ -34,8 +36,11 @@ export default function Home() {
   const [scanMode, setScanMode] = useState<ScanMode>('UPLOAD_FILES')
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [codeContent, setCodeContent] = useState('')
+  const [githubUrl, setGithubUrl] = useState('')
   const [language, setLanguage] = useState('.py')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+  const router = useRouter()
 
   // 새로 추가된 상태: 검사 진행 여부와 서버에서 받은 결과를 저장합니다.
   const [isScanning, setIsScanning] = useState(false)
@@ -51,7 +56,7 @@ export default function Home() {
     setErrorMsg(msg)
   }
 
-  // ScanAction 대신 직접 백엔드와 통신하는 함수입니다.
+  // Mock Scan function
   const executeScan = async () => {
     if (scanMode === 'UPLOAD_FILES' && selectedFiles.length === 0) {
       setErrorMsg('업로드할 파일을 선택해주세요.')
@@ -61,40 +66,21 @@ export default function Home() {
       setErrorMsg('검사할 코드를 입력해주세요.')
       return
     }
+    if (scanMode === 'GITHUB_URL' && !githubUrl.trim()) {
+      setErrorMsg('GitHub URL을 입력해주세요.')
+      return
+    }
 
     setIsScanning(true)
     setErrorMsg(null)
     setScanResults(null)
 
-    const formData = new FormData()
-
-    if (scanMode === 'UPLOAD_FILES') {
-      formData.append('code_file', selectedFiles[0])
-    } else {
-      formData.append('code_text', codeContent)
-      formData.append('language', language)
-    }
-
-    try {
-      // 중요: 백엔드 주소로 정확히 요청합니다. FastAPI의 기본 포트인 8000번을 명시합니다.
-      const response = await fetch('http://localhost:8000/scan', {
-        method: 'POST',
-        body: formData,
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.detail || '스캔 중 오류가 발생했습니다.')
-      }
-
-      // 서버로부터 받은 취약점 배열 데이터를 상태에 저장합니다.
-      setScanResults(data)
-    } catch (err: any) {
-      setErrorMsg(`서버 연결 오류: ${err.message}. 백엔드가 켜져 있는지 확인해주세요.`)
-    } finally {
+    // Simulate network delay for scanning
+    setTimeout(() => {
       setIsScanning(false)
-    }
+      // Route to dummy data dashboard
+      router.push('/analysis/101')
+    }, 1500)
   }
 
   return (
@@ -120,6 +106,14 @@ export default function Home() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2">
             {scanMode === 'UPLOAD_FILES' ? (
               <FileDropzone onFilesSelected={handleFilesSelected} onError={handleError} />
+            ) : scanMode === 'GITHUB_URL' ? (
+              <div className="p-8 pb-4">
+                <GithubInput 
+                  value={githubUrl} 
+                  onChange={(val) => { setErrorMsg(null); setGithubUrl(val); }} 
+                  onSubmit={executeScan}
+                />
+              </div>
             ) : (
               <>
                 <CodeEditorInput value={codeContent} onChange={(val) => {

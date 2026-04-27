@@ -1,4 +1,4 @@
-export type ScanMode = 'UPLOAD_FILES' | 'DIRECT_CODE'
+export type ScanMode = 'UPLOAD_FILES' | 'DIRECT_CODE' | 'GITHUB_URL'
 
 export const ALLOWED_EXTENSIONS = ['.js', '.ts', '.py', '.go', '.rs']
 

@@ -32,6 +32,17 @@ export default function ScanInputSelector({ currentMode, onChange }: Props) {
       >
         DIRECT CODE
       </button>
+      <button
+        type="button"
+        className={`px-6 py-2 rounded-md font-medium transition-colors ${
+          currentMode === 'GITHUB_URL'
+            ? 'bg-gray-800 text-white shadow'
+            : 'text-gray-500 hover:text-gray-700'
+        }`}
+        onClick={() => onChange('GITHUB_URL')}
+      >
+        GITHUB URL
+      </button>
     </div>
   )
 }
