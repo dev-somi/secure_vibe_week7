@@ -3,6 +3,8 @@
 import { useState, useRef, DragEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowUp, GitBranch, ArrowRight, Lock } from 'lucide-react'
+import { executeScan } from '../src/application/usecases/ExecuteScanUseCase'
+import { useScanStore } from '../src/application/store/scanStore'
 
 export default function Home() {
   const [githubUrl, setGithubUrl] = useState('')
@@ -10,16 +12,29 @@ export default function Home() {
   const [isDragging, setIsDragging] = useState(false)
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const setResults = useScanStore((state) => state.setResults)
 
-  const handleScan = () => {
+  const handleScan = async () => {
     if (!githubUrl.trim()) return
     setIsScanning(true)
 
-    // 분석 진행 시뮬레이션
-    setTimeout(() => {
-      setIsScanning(false)
+    try {
+      const results = await executeScan({
+        mode: 'GITHUB_URL',
+        files: [],
+        code: '',
+        language: '',
+        githubUrl: githubUrl,
+      })
+      
+      setResults(results)
       router.push('/analysis/1')
-    }, 1500)
+    } catch (error) {
+      console.error('Scan failed:', error)
+      alert('분석 중 오류가 발생했습니다.')
+    } finally {
+      setIsScanning(false)
+    }
   }
 
   const handleFileUpload = async (files: FileList | File[]) => {
@@ -27,27 +42,19 @@ export default function Home() {
 
     setIsScanning(true)
 
-    const formData = new FormData()
-    Array.from(files).forEach(file => {
-      formData.append('files', file)
-    })
-
     try {
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
+      const results = await executeScan({
+        mode: 'UPLOAD_FILES',
+        files: Array.from(files),
+        code: '',
+        language: '',
       })
-
-      if (response.ok) {
-        const data = await response.json()
-        router.push(`/analysis/${data.analysisId || '1'}`)
-      } else {
-        console.error('Upload failed')
-        alert('파일 업로드에 실패했습니다.')
-      }
+      
+      setResults(results)
+      router.push('/analysis/1')
     } catch (error) {
-      console.error('Error uploading files:', error)
-      alert('업로드 중 오류가 발생했습니다.')
+      console.error('Error scanning files:', error)
+      alert('분석 중 오류가 발생했습니다.')
     } finally {
       setIsScanning(false)
     }

@@ -3,44 +3,47 @@
 import { useMemo, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { dummyAnalysisData } from '@/src/presentation/mock/dummyData'
 import { useAuthStore } from '@/src/application/store/useAuthStore'
+import { useScanStore } from '@/src/application/store/scanStore'
 import { AlertTriangle, Check, X, RefreshCw, MessageCircle } from 'lucide-react'
 
 export default function DashboardPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
-  // Ensure the hook is called safely
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn)
-
-  // Use dummy data regardless of the id for mockup purposes
-  const data = dummyAnalysisData
+  const results = useScanStore((state) => state.results)
 
   const severityCounts = useMemo(() => {
     const counts = { critical: 0, high: 0, medium: 0, low: 0 }
-    data.vulnerabilities.forEach((vuln) => {
-      counts[vuln.severity] += 1
+    results.forEach((vuln) => {
+      const sev = vuln.extra.severity.toLowerCase()
+      if (sev === 'error' || sev === 'critical') counts.critical++
+      else if (sev === 'warning' || sev === 'high') counts.high++
+      else if (sev === 'medium') counts.medium++
+      else counts.low++
     })
     return counts
-  }, [data])
+  }, [results])
 
   const issueTypeCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    data.vulnerabilities.forEach(v => {
-      counts[v.content.title] = (counts[v.content.title] || 0) + 1;
+    results.forEach(v => {
+      // Use check_id or message as title if title is not available
+      const title = v.check_id.split('.').pop() || 'Unknown Issue'
+      counts[title] = (counts[title] || 0) + 1;
     });
     return Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  }, [data]);
+  }, [results]);
 
   const fileIssueCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    data.vulnerabilities.forEach(v => {
-      counts[v.content.file] = (counts[v.content.file] || 0) + 1;
+    results.forEach(v => {
+      counts[v.path] = (counts[v.path] || 0) + 1;
     });
     return Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  }, [data]);
+  }, [results]);
 
-  const totalIssues = data.vulnerabilities.length;
+  const totalIssues = results.length;
 
   // Colors for severity
   const severityColors = {
@@ -51,9 +54,13 @@ export default function DashboardPage({ params }: { params: Promise<{ id: string
   };
 
   const getSeverityColor = (title: string) => {
-    // Determine a color for the issue type bar based on its most severe finding
-    const matchingVuln = data.vulnerabilities.find(v => v.content.title === title);
-    return matchingVuln ? severityColors[matchingVuln.severity] : '#6b7280';
+    const matchingVuln = results.find(v => (v.check_id.split('.').pop() || 'Unknown Issue') === title);
+    if (!matchingVuln) return '#6b7280';
+    const sev = matchingVuln.extra.severity.toLowerCase()
+    if (sev === 'error' || sev === 'critical') return severityColors.critical
+    if (sev === 'warning' || sev === 'high') return severityColors.high
+    if (sev === 'medium') return severityColors.medium
+    return severityColors.low
   };
 
   return (
