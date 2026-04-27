@@ -2,10 +2,12 @@
 
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { use } from 'react'
 import { dummyAnalysisData, Vulnerability } from '@/src/presentation/mock/dummyData'
 import { AlertCircle, FileCode2, ArrowLeft, ChevronRight } from 'lucide-react'
 
-export default function VulnerabilityListPage({ params }: { params: { id: string } }) {
+export default function VulnerabilityListPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const router = useRouter()
   // Mock data usage
   const data = dummyAnalysisData
@@ -46,7 +48,7 @@ export default function VulnerabilityListPage({ params }: { params: { id: string
         
         {/* Header */}
         <div className="mb-8">
-          <Link href={`/analysis/${params.id}`} className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-obsidian-green mb-4 transition-colors">
+          <Link href={`/analysis/${id}`} className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-obsidian-green mb-4 transition-colors">
             <ArrowLeft className="w-4 h-4 mr-1" />
             대시보드로 돌아가기
           </Link>
@@ -63,7 +65,7 @@ export default function VulnerabilityListPage({ params }: { params: { id: string
           {data.vulnerabilities.map((vuln) => (
             <div 
               key={vuln.vuln_id}
-              onClick={() => router.push(`/analysis/${params.id}/${vuln.vuln_id}`)}
+              onClick={() => router.push(`/analysis/${id}/${vuln.vuln_id}`)}
               className={`flex items-center justify-between p-5 rounded-2xl border cursor-pointer hover:shadow-md transition-all ${getSeverityStyles(vuln.severity)}`}
             >
               <div className="flex items-start gap-4">

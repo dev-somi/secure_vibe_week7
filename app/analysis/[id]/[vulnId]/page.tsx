@@ -1,24 +1,25 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, use } from 'react'
 import Link from 'next/link'
 import { dummyAnalysisData, Vulnerability } from '@/src/presentation/mock/dummyData'
 import ReactDiffViewer from 'react-diff-viewer-continued'
 import { ArrowLeft, ShieldAlert, Wrench, FileCode2, Info } from 'lucide-react'
 
-export default function VulnerabilityDetailPage({ params }: { params: { id: string; vulnId: string } }) {
+export default function VulnerabilityDetailPage({ params }: { params: Promise<{ id: string; vulnId: string }> }) {
+  const { id, vulnId } = use(params)
   // Find the exact vulnerability from the dummy data
   const vulnData = useMemo(() => {
     return dummyAnalysisData.vulnerabilities.find(
-      (v) => v.vuln_id.toString() === params.vulnId
+      (v) => v.vuln_id.toString() === vulnId
     )
-  }, [params.vulnId])
+  }, [vulnId])
 
   if (!vulnData) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
         <h1 className="text-2xl font-bold text-gray-800">해당 취약점을 찾을 수 없습니다.</h1>
-        <Link href={`/analysis/${params.id}/list`} className="mt-4 text-obsidian-green hover:underline">
+        <Link href={`/analysis/${id}/list`} className="mt-4 text-obsidian-green hover:underline">
           목록으로 돌아가기
         </Link>
       </div>
@@ -46,7 +47,7 @@ export default function VulnerabilityDetailPage({ params }: { params: { id: stri
         
         {/* Navigation */}
         <div className="mb-6">
-          <Link href={`/analysis/${params.id}/list`} className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-obsidian-green transition-colors">
+          <Link href={`/analysis/${id}/list`} className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-obsidian-green transition-colors">
             <ArrowLeft className="w-4 h-4 mr-1" />
             목록으로 돌아가기
           </Link>

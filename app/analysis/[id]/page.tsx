@@ -1,13 +1,14 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { dummyAnalysisData } from '@/src/presentation/mock/dummyData'
 import { useAuthStore } from '@/src/application/store/useAuthStore'
 import { AlertTriangle, CheckCircle, XCircle, ShieldAlert, FileSearch, Clock } from 'lucide-react'
 
-export default function DashboardPage({ params }: { params: { id: string } }) {
+export default function DashboardPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const router = useRouter()
   // Ensure the hook is called safely
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn)
@@ -61,7 +62,7 @@ export default function DashboardPage({ params }: { params: { id: string } }) {
         <div className="mb-8 flex justify-between items-end">
           <div>
             <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Security Summary</h1>
-            <p className="text-gray-500 mt-2">Analysis Task ID: {params.id}</p>
+            <p className="text-gray-500 mt-2">Analysis Task ID: {id}</p>
           </div>
           <div className="text-right">
              <Link href="/" className="text-obsidian-green hover:underline text-sm font-medium">
@@ -108,7 +109,7 @@ export default function DashboardPage({ params }: { params: { id: string } }) {
           {/* Action Buttons Section */}
           <div className="flex flex-col sm:flex-row justify-center gap-4 border-t border-gray-100 pt-8 mt-4">
             <button
-              onClick={() => router.push(`/analysis/${params.id}/list`)}
+              onClick={() => router.push(`/analysis/${id}/list`)}
               className="flex items-center justify-center px-8 py-3 bg-[#0f172a] hover:bg-obsidian-green hover:text-[#0f172a] text-white rounded-lg font-bold transition-colors"
             >
               <FileSearch className="w-5 h-5 mr-2" />
