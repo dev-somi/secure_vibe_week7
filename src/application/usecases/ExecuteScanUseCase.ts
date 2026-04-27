@@ -1,20 +1,11 @@
 import { ScanMode } from '../../domain/entities/ScanType'
+import { VulnerabilityResult } from '../../domain/entities/ScanResult'
 
 export interface ScanPayload {
   mode: ScanMode
   files: File[]
   code: string
   language: string
-}
-
-export interface VulnerabilityResult {
-  path: string
-  start: { line: number }
-  extra: {
-    severity: string
-    message: string
-    metadata: { cwe?: string[] }
-  }
 }
 
 export async function executeScan(payload: ScanPayload): Promise<VulnerabilityResult[]> {
