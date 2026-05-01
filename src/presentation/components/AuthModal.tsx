@@ -29,32 +29,61 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     try {
       const endpoint = isLogin ? '/login' : '/signup'
       const formData = new URLSearchParams()
-      formData.append('sid', sid)
-      formData.append('spassword', spassword)
-      
-      if (!isLogin) {
+
+      if (isLogin) {
+        formData.append('id', sid)
+        formData.append('password', spassword)
+      } else {
+        formData.append('sid', sid)
+        formData.append('spassword', spassword)
         formData.append('sname', sname)
         formData.append('sapikey', sapikey)
       }
 
-      // 실제 백엔드 주소로 변경 필요 (예: http://localhost:8000/signup)
+      // 실제 백엔드 주소 (필요시 환경변수로 분리 권장)
       const response = await fetch(`http://localhost:8000${endpoint}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formData.toString(),
+        body: formData, // URLSearchParams 객체를 직접 전달하면 브라우저가 자동으로 header를 설정합니다.
       })
 
-      const data = await response.json()
-      setMessage(data.message || (response.ok ? (isLogin ? '로그인 성공' : '회원가입 성공') : '오류가 발생했습니다.'))
-      
+      if (response.status === 422) {
+        const errorData = await response.json().catch(() => null)
+        const errorMsg = errorData?.detail
+          ? (typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData.detail))
+          : '필수 입력값이 누락되었거나 형식이 올바르지 않습니다.'
+        setMessage(`[422] 검증 오류: ${errorMsg}`)
+        setIsLoading(false)
+        return
+      }
+
+      const data = await response.json().catch(() => ({}))
+
       if (response.ok) {
+        setMessage(isLogin ? '로그인 성공' : '회원가입 성공')
+
+        if (isLogin) {
+          // 로그인 성공 시 응답 데이터를 LocalStorage에 저장
+          localStorage.setItem('userSession', JSON.stringify({
+            ...data,
+            id: sid,
+            loginTime: new Date().toISOString()
+          }))
+        }
+
         setTimeout(() => {
           onClose()
           setIsLoading(false)
+          if (!isLogin) {
+            // 회원가입 성공 시 로그인 화면으로 전환
+            setIsLogin(true)
+            setMessage('')
+          } else {
+            // 로그인 성공 시 필요한 전역 상태 업데이트나 리다이렉트 처리 추가 가능
+            window.location.reload()
+          }
         }, 1500)
       } else {
+        setMessage(data.message || data.detail || '요청 처리 중 오류가 발생했습니다.')
         setIsLoading(false)
       }
     } catch (error) {
@@ -68,7 +97,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden relative border border-gray-100">
         {/* Close Button */}
-        <button 
+        <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-900 transition-colors rounded-full hover:bg-gray-100"
         >
