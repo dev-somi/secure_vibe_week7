@@ -2,22 +2,21 @@
 
 import { useMemo, use } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useScanStore } from '@/src/application/store/scanStore'
-import { ArrowLeft, ShieldAlert, Wrench, FileCode2, Info } from 'lucide-react'
+import { ArrowLeft, PowerOff, Check } from 'lucide-react'
 
 export default function VulnerabilityDetailPage({ params }: { params: Promise<{ id: string; vulnId: string }> }) {
   const { id, vulnId } = use(params)
+  const router = useRouter()
   const results = useScanStore((state) => state.results)
   
-  // Find the exact vulnerability from the results
-  const vulnData = useMemo(() => {
-    const index = parseInt(vulnId)
-    return results[index] || null
-  }, [results, vulnId])
+  const currentIndex = parseInt(vulnId)
+  const vulnData = useMemo(() => results[currentIndex] || null, [results, currentIndex])
 
   if (!vulnData) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
+      <div className="min-h-screen bg-[#FAFAFA] flex flex-col items-center justify-center">
         <h1 className="text-2xl font-bold text-gray-800">해당 취약점을 찾을 수 없습니다.</h1>
         <Link href={`/analysis/${id}/list`} className="mt-4 text-orange-600 hover:underline">
           목록으로 돌아가기
@@ -26,95 +25,181 @@ export default function VulnerabilityDetailPage({ params }: { params: Promise<{ 
     )
   }
 
-  const getSeverityBadge = (severity: string) => {
+  const getSeverityInfo = (severity: string) => {
     const sev = severity.toLowerCase()
-    if (sev === 'error' || sev === 'critical') {
-      return <span className="bg-red-100 text-red-800 border border-red-200 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wide">Critical</span>
-    }
-    if (sev === 'warning' || sev === 'high') {
-      return <span className="bg-orange-100 text-orange-800 border border-orange-200 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wide">High</span>
-    }
-    if (sev === 'medium') {
-      return <span className="bg-yellow-100 text-yellow-800 border border-yellow-200 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wide">Medium</span>
-    }
-    return <span className="bg-blue-100 text-blue-800 border border-blue-200 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wide">Low</span>
+    if (sev === 'error' || sev === 'critical') return { label: 'CRITICAL', color: 'bg-[#E35454]', text: 'text-white', border: 'border-[#E35454]' }
+    if (sev === 'warning' || sev === 'high') return { label: 'HIGH', color: 'bg-[#F28B2A]', text: 'text-white', border: 'border-[#F28B2A]' }
+    if (sev === 'medium') return { label: 'MEDIUM', color: 'bg-[#F2C94C]', text: 'text-black', border: 'border-[#F2C94C]' }
+    return { label: 'LOW', color: 'bg-[#2D9CDB]', text: 'text-white', border: 'border-[#2D9CDB]' }
   }
 
   const title = vulnData.check_id.split('.').pop() || 'Unknown Issue'
-  const cwe = vulnData.extra.metadata.cwe?.[0] || 'Unknown'
+  const cwe = vulnData.extra.metadata?.cwe?.[0] || 'CWE-Unknown'
+  const severityInfo = getSeverityInfo(vulnData.extra.severity)
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
-      <main className="flex-1 flex flex-col pt-12 max-w-6xl mx-auto w-full px-4 mb-20">
-        
-        {/* Navigation */}
-        <div className="mb-6">
-          <Link href={`/analysis/${id}/list`} className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-orange-600 transition-colors">
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            목록으로 돌아가기
+    <div className="min-h-screen flex bg-[#FAFAFA] font-sans text-[#1A1A1A]">
+      
+      {/* Left Sidebar */}
+      <aside className="w-[320px] bg-[#F4F4F4] border-r border-[#E5E5E5] flex flex-col h-screen sticky top-0 overflow-hidden">
+        <div className="p-6 pb-4">
+          <Link href={`/analysis/${id}/list`} className="inline-flex items-center text-xs font-semibold text-gray-500 hover:text-black mb-6 transition-colors">
+            <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+            BACK TO LIST
           </Link>
+          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">
+            ISSUES ({results.length})
+          </h2>
         </div>
-
-        {/* Title Section */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">{title}</h1>
-            {getSeverityBadge(vulnData.extra.severity)}
-          </div>
-          <div className="flex items-center text-gray-600 bg-gray-100 px-4 py-2 rounded-lg font-mono text-sm w-fit">
-            <FileCode2 className="w-4 h-4 mr-2" />
-            {vulnData.path} 
-            <span className="mx-3 text-gray-400">|</span> 
-            Line: {vulnData.start.line}
-            <span className="mx-3 text-gray-400">|</span>
-            {cwe}
-          </div>
+        <div className="flex-1 overflow-y-auto">
+          {results.map((vuln, index) => {
+            const isActive = index === currentIndex
+            const itemTitle = vuln.check_id.split('.').pop() || 'Unknown Issue'
+            return (
+              <button
+                key={index}
+                onClick={() => router.push(`/analysis/${id}/${index}`)}
+                className={`w-full text-left px-6 py-4 border-b border-[#E5E5E5] transition-colors relative ${
+                  isActive ? 'bg-white' : 'hover:bg-[#EBEBEB]'
+                }`}
+              >
+                {isActive && (
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#E35454]" />
+                )}
+                <div className={`font-semibold mb-1 truncate ${isActive ? 'text-black' : 'text-gray-700'}`}>
+                  {itemTitle}
+                </div>
+                <div className="text-xs text-gray-500 font-mono truncate">
+                  {vuln.path.split('/').pop()}:{vuln.start.line}
+                </div>
+              </button>
+            )
+          })}
         </div>
+      </aside>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-          {/* Risk Scenario */}
-          <div className="bg-red-50 rounded-2xl shadow-sm border border-red-100 p-8">
-            <h2 className="text-xl font-bold text-red-900 mb-4 flex items-center">
-              <ShieldAlert className="w-6 h-6 mr-2 text-red-600" />
-              탐지 메시지
-            </h2>
-            <p className="text-red-800 leading-relaxed text-lg">
-              {vulnData.extra.message}
-            </p>
-            <div className="mt-4 flex bg-white/50 p-3 rounded-lg border border-red-100 text-sm text-red-700 items-start">
-               <Info className="w-5 h-5 mr-2 shrink-0 mt-0.5 opacity-70" />
-               <p>이 메시지는 스캐너가 탐지한 원본 메시지입니다. 상세한 위험 시나리오 분석 결과는 준비 중입니다.</p>
+      {/* Right Content */}
+      <main className="flex-1 overflow-y-auto h-screen relative">
+        <div className="max-w-[800px] px-12 py-16 pb-32">
+          
+          {/* Header Rows */}
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-3">
+              <span className={`px-4 py-1.5 rounded-full text-xs font-bold tracking-wider ${severityInfo.color} ${severityInfo.text} border-2 ${severityInfo.border}`}>
+                ● {severityInfo.label}
+              </span>
+              <span className="px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide border-2 border-gray-400 text-gray-700 bg-white">
+                {title}
+              </span>
+              <span className="px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide border-2 border-gray-400 text-gray-700 bg-white">
+                {cwe.split(':')[0]}
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <button className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold border-2 border-gray-400 text-gray-600 bg-white hover:bg-gray-50 transition-colors">
+                <PowerOff className="w-3.5 h-3.5" />
+                ignore
+              </button>
+              <button className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold border-2 border-black text-white bg-[#1A1A1A] hover:bg-black transition-colors">
+                <Check className="w-3.5 h-3.5" />
+                mark fixed
+              </button>
             </div>
           </div>
 
-          {/* Fix Direction */}
-          <div className="bg-green-50 rounded-2xl shadow-sm border border-green-100 p-8">
-            <h2 className="text-xl font-bold text-green-900 mb-4 flex items-center">
-              <Wrench className="w-6 h-6 mr-2 text-green-600" />
-              탐지 규칙 정보
-            </h2>
-            <p className="text-green-800 leading-relaxed text-lg">
-              규칙 ID: {vulnData.check_id}
+          <h1 className="text-4xl font-extrabold text-[#1A1A1A] mb-3 tracking-tight">
+            {title}
+          </h1>
+          <div className="text-sm text-gray-500 font-mono mb-10">
+            {vulnData.path} · line {vulnData.start.line} · detected just now
+          </div>
+
+          {/* Card 1: Risk */}
+          <div className="border-[2.5px] border-[#1A1A1A] rounded-xl bg-white p-8 mb-6 shadow-[4px_4px_0px_0px_rgba(26,26,26,1)]">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-8 h-8 rounded-full bg-[#E35454] text-white flex items-center justify-center font-bold text-sm shrink-0">
+                1
+              </div>
+              <h2 className="text-xl font-bold italic">The risk – in plain words</h2>
+            </div>
+            <p className="text-gray-700 leading-relaxed mb-8">
+              {vulnData.extra.message}
             </p>
-            <p className="text-green-700 text-sm mt-2">
-              이 취약점은 해당 규칙에 의해 탐지되었습니다. 코드 수정을 위해 규칙 정의를 참고하세요.
+            <div className="flex flex-wrap gap-2">
+              <span className="px-4 py-1.5 rounded-full text-xs font-bold bg-[#E35454] text-white border border-[#C53F3F]">
+                data breach
+              </span>
+              <span className="px-4 py-1.5 rounded-full text-xs font-bold bg-[#E35454] text-white border border-[#C53F3F]">
+                account takeover
+              </span>
+              <span className="px-4 py-1.5 rounded-full text-xs font-semibold border border-gray-400 text-gray-700 bg-white">
+                exploitable: easy
+              </span>
+              <span className="px-4 py-1.5 rounded-full text-xs font-semibold border border-gray-400 text-gray-700 bg-white">
+                public-facing
+              </span>
+            </div>
+          </div>
+
+          {/* Card 2: Fix */}
+          <div className="border-[2.5px] border-[#1A1A1A] rounded-xl bg-white p-8 mb-6 shadow-[4px_4px_0px_0px_rgba(26,26,26,1)]">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-8 h-8 rounded-full bg-[#1A1A1A] text-white flex items-center justify-center font-bold text-sm shrink-0">
+                2
+              </div>
+              <h2 className="text-xl font-bold italic">How to fix it</h2>
+            </div>
+            <ol className="list-decimal list-outside ml-5 text-gray-700 leading-relaxed space-y-3 mb-6 font-medium">
+              <li>Understand the specific vulnerability associated with <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">{vulnData.check_id}</span>.</li>
+              <li>Locate the affected code at line {vulnData.start.line} in <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">{vulnData.path.split('/').pop()}</span>.</li>
+              <li>Apply secure coding patterns (e.g., parameterized queries, input validation) to resolve the flaw.</li>
+            </ol>
+            <p className="text-sm text-gray-400 italic">
+              ↳ same pattern may apply to similar issues in this repo
             </p>
           </div>
+
+          {/* Card 3: Diff */}
+          <div className="border-[2.5px] border-[#1A1A1A] rounded-xl bg-white p-8 mb-6 shadow-[4px_4px_0px_0px_rgba(26,26,26,1)]">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-8 h-8 rounded-full bg-[#4CAF50] text-white flex items-center justify-center font-bold text-sm shrink-0">
+                  3
+                </div>
+                <h2 className="text-xl font-bold italic">Before / after</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <button className="px-4 py-1.5 rounded-full text-xs font-semibold border border-gray-400 text-gray-600 bg-white hover:bg-gray-50 transition-colors">
+                  copy
+                </button>
+                <button className="px-4 py-1.5 rounded-full text-xs font-semibold border border-gray-400 text-gray-600 bg-white hover:bg-gray-50 transition-colors">
+                  side-by-side
+                </button>
+              </div>
+            </div>
+            
+            <div className="rounded-lg overflow-hidden border border-red-200">
+              <div className="bg-[#FFEAEA] px-4 py-3 font-mono text-sm text-[#D32F2F] flex items-start gap-4">
+                <span className="opacity-50 select-none">-</span>
+                <span>// Vulnerable code located at line {vulnData.start.line}</span>
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 mt-6 italic">
+              references & CWE links below ↓
+            </p>
+          </div>
+
         </div>
 
-        {/* Diff Viewer Section */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
-            <h2 className="text-lg font-bold text-gray-800">해결 방법 (코드 Diff)</h2>
-            <p className="text-sm text-gray-500 mt-1">빨간색 코드를 제거하고 초록색 코드로 교체하세요.</p>
-          </div>
-          
-          <div className="text-sm p-8 bg-gray-50 text-gray-400 italic text-center">
-            실시간 코드 Diff 기능은 현재 준비 중입니다. 원본 소스 코드의 {vulnData.start.line}번 라인을 확인해 주세요.
-          </div>
+        {/* Floating Action Button */}
+        <div className="fixed bottom-10 right-10">
+          <button className="flex items-center gap-2 bg-[#1A1A1A] text-white px-6 py-3.5 rounded-full font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.2)] transition-all">
+            Apply fix as PR →
+          </button>
         </div>
-
       </main>
+
     </div>
   )
 }
