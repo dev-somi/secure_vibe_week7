@@ -2,14 +2,17 @@
 
 import { useState, useRef, DragEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowUp, GitBranch, ArrowRight, Lock } from 'lucide-react'
+import { ArrowUp, GitBranch, ArrowRight, Lock, LogIn } from 'lucide-react'
 import { executeScan } from '../src/application/usecases/ExecuteScanUseCase'
 import { useScanStore } from '../src/application/store/scanStore'
+import AuthModal from '../src/presentation/components/AuthModal'
 
 export default function Home() {
   const [githubUrl, setGithubUrl] = useState('')
   const [isScanning, setIsScanning] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const setResults = useScanStore((state) => state.setResults)
@@ -70,7 +73,18 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-[#FAFAFA] flex flex-col items-center justify-center p-4 md:p-8 text-[#1A1A1A]">
+    <main className="min-h-screen bg-[#FAFAFA] flex flex-col items-center justify-center p-4 md:p-8 text-[#1A1A1A] relative">
+      
+      {/* 우측 상단 네비게이션 */}
+      <nav className="absolute top-8 right-8 z-10">
+        <button 
+          onClick={() => setIsAuthModalOpen(true)}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-gray-200 bg-white/50 backdrop-blur-sm hover:border-gray-900 hover:bg-white transition-all text-sm font-bold italic shadow-sm"
+        >
+          <LogIn className="w-4 h-4" />
+          로그인
+        </button>
+      </nav>
 
       <div className="max-w-4xl w-full flex flex-col items-center py-10">
         {/* 헤더 섹션 */}
@@ -188,6 +202,12 @@ export default function Home() {
           <span>코드는 안전한 샌드박스 내부에서만 유지됩니다 · 분석은 보통 30-60초 정도 소요됩니다</span>
         </div>
       </div>
+
+      {/* 인증 모달 */}
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+      />
     </main >
   )
 }
